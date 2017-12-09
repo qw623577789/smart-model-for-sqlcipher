@@ -10,7 +10,7 @@ module.exports = class extends Command {
 
     async run() {
         this._sql = `INSERT INTO \`${this._name}\``;
-        this._parseData(this._data);        
+        this._parseoInsertData(this._data);        
 
         return await this._execute();
     }

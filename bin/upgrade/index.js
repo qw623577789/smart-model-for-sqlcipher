@@ -1,22 +1,20 @@
 const fsx = require('fs-extra');
 const Helper = require('../../lib/helper');
-const mysql = require('mysql');
+const sqlite3 = require('sqlcipher').verbose();
 
-function executeSql(connection, sql) {
-    return new Promise((resolve, reject) => {
-        connection.query(sql, (error) => {
+async function executeSql(connection, sql) {
+    return await new Promise((resolve, reject) => {
+        connection.run(sql, (error) => {
             if (error) {
-                reject(error);
-                return;
+                return reject(error);
             }
-
-            resolve();
+            return resolve();
         });
     });
 }
 
-function addFieldSql(database, table, field, desc) {
-    let sql = `ALTER TABLE ${database}.${table} ADD COLUMN \`${field}\``;
+function addFieldSql(table, field, desc) {
+    let sql = `ALTER TABLE \`${table}\` ADD COLUMN \`${field}\``;
     switch(desc.type.toLowerCase()) {
         case 'string':
             sql += ` VARCHAR(${desc.length}) NOT NULL DEFAULT '${desc.default}'`;
@@ -25,19 +23,24 @@ function addFieldSql(database, table, field, desc) {
             sql += ` INTEGER NOT NULL DEFAULT ${desc.default}`;
             break;
     }
+    return sql;
+}
+
+function addIndexSql(table, field, desc) {
+    let sql = "";
     switch (desc.index) {
         case 'unique':
-            sql += `,ADD UNIQUE INDEX(\`${field}\`)`;
+            sql = `CREATE UNIQUE INDEX IF NOT EXISTS idx_${table}_${field} on \`${table}\`(${field});`;
             break;
         case 'ordinary':
-            sql += `,ADD INDEX(\`${field}\`)`;
+            sql = `CREATE INDEX IF NOT EXISTS idx_${table}_${field} on \`${table}\`(${field});`;
             break;
     }
     return sql;
 }
 
-function dropFieldSql(database, table, field, desc) {
-    return `ALTER TABLE ${database}.${table} DROP COLUMN \`${field}\``;
+function dropFieldSql(table, field, desc) {
+    return `ALTER TABLE \`${table}\` DROP COLUMN \`${field}\``;
 }
 
 module.exports = async (param) => {
@@ -47,13 +50,25 @@ module.exports = async (param) => {
         if (helper.config === undefined) {
             throw new Error(`no config`);
         }
-        const connection = await mysql.createConnection({
-            host: helper.config.host,
-            port: helper.config.port,
-            user: helper.config.user,
-            password: helper.config.password
-        });
-        await executeSql(connection, `CREATE DATABASE IF NOT EXISTS ${helper.config.database}`);
+
+        let connection = await new Promise((resolve, reject) => {
+            const conn = new sqlite3.Database(helper.config.file, (err) => {
+                if (err) return reject(err);
+            });
+            if (helper.config.password !=  undefined) {
+                conn.exec(`pragma key = '${helper.config.password}';pragma cipher = '${helper.config.cipherMode}';`, (err) => {
+                    if (err) {
+                        return reject(err);
+                    }
+                    else {
+                        return resolve(conn);
+                    }
+                });
+            }
+            else {
+                return resolve(conn);
+            }
+        })
 
         for (let name of helper.models) {
             const {current, obsolete} = helper.model(name);
@@ -62,13 +77,16 @@ module.exports = async (param) => {
             	let sqls = [];
 			    Object.entries(current).forEach(([field, desc]) => {
 			        if (obsolete[field] === undefined) {
-			            sqls.push(addFieldSql(helper.config.database, name, field, desc));
+                        sqls.push(addFieldSql(name, field, desc));
+                        if (desc.index != undefined) {
+                            sqls.push(addIndexSql(name, field, desc));
+                        }
 			            return;
 			        }
 			    });
 			    Object.entries(obsolete).forEach(([field, desc]) => {
 			        if (current[field] === undefined) {
-			            sqls.push(dropFieldSql(helper.config.database, name, field, desc));
+			            sqls.push(dropFieldSql(name, field, desc));
 			            return;
 			        }
 			    });
@@ -79,7 +97,14 @@ module.exports = async (param) => {
             }
         }
 
-        connection.end();
+        return new Promise((resolve, reject) => {
+            connection.close((error) => {
+                if (error) {
+                    return reject(error);
+                }
+                return resolve();
+            })
+        });
     }
     catch(err) {
         console.log(err.stack);

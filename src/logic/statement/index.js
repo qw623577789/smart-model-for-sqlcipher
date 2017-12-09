@@ -12,11 +12,11 @@ class LogicStatement extends Logic {
     }
 
     toSql() {
-        return `(?? ${this._op} ?)`;
+        return `(${this._field.split('.').map(item => '\`' + item + '\`').join('.')} ${this._op} ?)`;
     }
 
     toParams() {
-        return [this._field, this._value];
+        return [this._value];
     }
 }
 

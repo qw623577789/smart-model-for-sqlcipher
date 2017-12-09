@@ -1,5 +1,5 @@
 const assert = require('assert');
-const mysql = require('mysql');
+const sqlite3 = require('sqlcipher').verbose();
 let config = undefined;
 let models = {};
 
@@ -34,20 +34,33 @@ module.exports = class {
         return models[name];
     }
 
-    _parseData(data) {
-        this._sql += ' SET ' + Object.keys(data).map(field => `\`${field}\`=?`).join(',');
+    _parseoInsertData(data) {
+        this._sql += ' (`' + Object.keys(data).join('`,`') + '`) VALUES (' + Object.keys(data).map(item => '?').join(',') + ')';
+        this._params = this._params.concat(Object.values(data));
+    }
+
+    _parseoUpdateData(data) {
+        this._sql += ' SET `' + Object.keys(data).map(item => item + '`=?').join(',`') ;
         this._params = this._params.concat(Object.values(data));
     }
 
     _parseJoins(joins) {
+        let fieldLeft = '';
+        let fieldRight = '';
         joins.forEach(join => {
             switch(join.type.toLowerCase()) {
                 case 'left':
-                case 'right':
+                    fieldLeft = join.fieldLeft.split('.').map(item => '\`' + item + '\`').join('.');
+                    fieldRight = join.fieldRight.split('.').map(item => '\`' + item + '\`').join('.');
+                    this._sql += ` ${join.type.toUpperCase()} OUTER JOIN \`${join.name}\` ON ${fieldLeft}=${fieldRight}`;
+                    break; 
                 case 'inner':
-                    this._sql += ` ${join.type.toUpperCase()} JOIN ?? ON ??=??`;
-                    this._params = this._params.concat([join.name, join.fieldLeft, join.fieldRight]);
+                    fieldLeft = join.fieldLeft.split('.').map(item => '\`' + item + '\`').join('.');
+                    fieldRight = join.fieldRight.split('.').map(item => '\`' + item + '\`').join('.');
+                    this._sql += ` ${join.type.toUpperCase()}  JOIN \`${join.name}\` ON ${fieldLeft}=${fieldRight}`;
                     break;
+                case 'right':
+                    throw new Error(`sqlite not suppport join type ${join.type}`);
                 default:
                     throw new Error(`unknown join type ${join.type}`);
             }
@@ -73,25 +86,66 @@ module.exports = class {
         this._params = this._params.concat(limit);
     }
 
-    _execute() {
+    async _execute() {
         assert(config !== undefined, 'You need to call setup before making any practical calls');
-        let connection = mysql.createConnection({
-            host: config.host,
-            port: config.port,
-            user: config.user,
-            password: config.password,
-            database: config.database
+        let connection = await new Promise((resolve, reject) => {
+            const conn = new sqlite3.Database(config.file, (err) => {
+                if (err) return reject(err);
+            });
+            if (config.password !=  undefined) {
+                conn.exec(`pragma key = '${config.password}';pragma cipher = '${config.cipherMode}';`, (err) => {
+                    if (err) {
+                        return reject(err);
+                    }
+                    else {
+                        return resolve(conn);
+                    }
+                });
+            }
+            else {
+                return resolve(conn);
+            }
+        })
+
+        let data = await new Promise((resolve, reject) => {
+            switch(this._sql.split(' ')[0].toLowerCase()) {
+                case "select":
+                    connection.all(this._sql, this._params, (error, rows) => {
+                        if (error) {
+                            return reject(error);
+                        }
+                        return resolve(rows);
+                    });
+                    break;
+                case "insert":
+                    connection.run(this._sql, this._params, function(error) {
+                        if (error) {
+                            return reject(error);
+                        }
+                        return resolve(this.lastID);
+                    });
+                    break;
+                case "update":
+                case "delete":
+                    connection.run(this._sql, this._params, function (error) {
+                        if (error) {
+                            return reject(error);
+                        }
+                        return resolve(this.changes);
+                    });
+                    break;
+            }
         });
 
-        return new Promise((resolve, reject) => {
-            connection.query(this._sql, this._params, function (error, results, fields) {
-                connection.end();
+        await new Promise((resolve, reject) => {
+            connection.close((error) => {
                 if (error) {
-                    reject(error);
-                    return;
+                    return reject(error);
                 }
-                resolve(results);
-            });
+                return resolve();
+            })
         });
+
+        return data;
     }
 }

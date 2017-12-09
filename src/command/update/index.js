@@ -23,7 +23,7 @@ module.exports = class extends Command {
 
     async run() {
         this._sql = `UPDATE \`${this._name}\``;
-        this._parseData(this._data);
+        this._parseoUpdateData(this._data);
         if(this._logic !== undefined) {
             this._parseLogic(this._logic);
         }

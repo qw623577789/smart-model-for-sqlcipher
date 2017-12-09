@@ -7,14 +7,12 @@ module.exports = (param) => {
     if (!ajv.validate({
         type: "object",
         properties: {
-            host: {type: "string"},
-            port: {type: "integer"},
-            user: {type: "string"},
-            password: {type: "string"},
-            database: {type: "string"}
+            file: {type: "string"},
+            cipherMode: {type: "string"},
+            password: {type: "string"}
         },
         additionalProperties: false,
-        required: ["host", "port", "user", "password", "database"]
+        required: ["file"]
     }, helper.config)) {
         throw new Error(`bad config file, details: ${ajv.errorsText()}`);
     }

@@ -31,23 +31,25 @@ const params = {
 	modelsDir: path.resolve(opts.get('models-dir'))
 };
 
-try {
-	switch(opts.get('action')) {
-		case 'diagnose':
-			require('./diagnose')(params);
-			break;
-		case 'setup':
-			require('./setup')(params);
-			break;
-		case 'upgrade':
-			require('./upgrade')(params);
-			break;
-		default:
-			opts.help();
-			break;
+Promise.resolve().then(async () => {
+	try {
+		switch(opts.get('action')) {
+			case 'diagnose':
+				require('./diagnose')(params);
+				break;
+			case 'setup':
+				await require('./setup')(params);
+				break;
+			case 'upgrade':
+				require('./upgrade')(params);
+				break;
+			default:
+				opts.help();
+				break;
+		}
 	}
-}
-catch(err) {
-	console.error(err.stack);
-	process.exit(-1);
-}
+	catch(err) {
+		console.error(err.stack);
+		process.exit(-1);
+	}
+})

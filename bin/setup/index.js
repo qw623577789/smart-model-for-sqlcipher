@@ -1,16 +1,14 @@
 const fsx = require('fs-extra');
 const Helper = require('../../lib/helper');
-const mysql = require('mysql');
+const sqlite3 = require('sqlcipher').verbose();
 
-function executeSql(connection, sql) {
-    return new Promise((resolve, reject) => {
-        connection.query(sql, (error) => {
+async function executeSql(connection, sql) {
+    return await new Promise((resolve, reject) => {
+        connection.run(sql, (error) => {
             if (error) {
-                reject(error);
-                return;
+                return reject(error);
             }
-
-            resolve();
+            return resolve();
         });
     });
 }
@@ -21,13 +19,25 @@ module.exports = async (param) => {
         if (helper.config === undefined) {
             throw new Error(`no config`);
         }
-        const connection = await mysql.createConnection({
-            host: helper.config.host,
-            port: helper.config.port,
-            user: helper.config.user,
-            password: helper.config.password
-        });
-        await executeSql(connection, `CREATE DATABASE IF NOT EXISTS ${helper.config.database}`);
+        
+        let connection = await new Promise((resolve, reject) => {
+            const conn = new sqlite3.Database(helper.config.file, (err) => {
+                if (err) return reject(err);
+            });
+            if (helper.config.password !=  undefined) {
+                conn.exec(`pragma key = '${helper.config.password}';pragma cipher = '${helper.config.cipherMode}';`, (err) => {
+                    if (err) {
+                        return reject(err);
+                    }
+                    else {
+                        return resolve(conn);
+                    }
+                });
+            }
+            else {
+                return resolve(conn);
+            }
+        })
 
         for (let name of helper.models) {
             const {current} = helper.model(name);
@@ -44,22 +54,34 @@ module.exports = async (param) => {
                         break;
                 }
             });
-            Object.entries(current).forEach(([field, desc]) => {
+
+            sql = `CREATE TABLE IF NOT EXISTS \`${name}\`(${sql})`;
+            await executeSql(connection, sql);
+
+            Object.entries(current).forEach(async ([field, desc]) => {
                 switch (desc.index) {
                     case 'unique':
-                        sql += `,UNIQUE INDEX(\`${field}\`)`;
+                        sql = `CREATE UNIQUE INDEX IF NOT EXISTS idx_${name}_${field} on \`${name}\`(${field});`;
                         break;
                     case 'ordinary':
-                        sql += `,INDEX(\`${field}\`)`;
+                        sql = `CREATE INDEX IF NOT EXISTS idx_${name}_${field} on \`${name}\`(${field});`;
                         break;
                 }
+                await executeSql(connection, sql);
             })
 
-            sql = `CREATE TABLE IF NOT EXISTS ${helper.config.database}.${name}(${sql})`;
-            await executeSql(connection, sql);
+
         }
 
-        connection.end();
+        return new Promise((resolve, reject) => {
+            connection.close((error) => {
+                if (error) {
+                    return reject(error);
+                }
+                return resolve();
+            })
+        });
+
     }
     catch(err) {
         console.log(err.stack);
