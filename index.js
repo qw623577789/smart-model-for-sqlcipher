@@ -43,6 +43,7 @@ module.exports = class {
             prev[curr] = require(`${path.resolve(modelsDir)}/${curr}.js`);
             return prev;
         }, {});
+        return this;
     }
 
     static select(name) {
