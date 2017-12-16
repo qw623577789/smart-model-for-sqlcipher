@@ -1,5 +1,5 @@
 const fsx = require('fs-extra');
-const Helper = require('../../lib/helper');
+const Helper = require('../../../lib/helper');
 const sqlite3 = require('sqlcipher').verbose();
 
 async function executeSql(connection, sql) {
@@ -13,9 +13,9 @@ async function executeSql(connection, sql) {
     });
 }
 
-module.exports = async (param) => {
+module.exports = async (modelsDir, configDir) => {
     try {
-        const helper = new Helper(param.modelsDir, param.configDir);
+        const helper = new Helper(modelsDir, configDir);
         if (helper.config === undefined) {
             throw new Error(`no config`);
         }

@@ -34,11 +34,11 @@ module.exports = class {
         };
     }
 
-    static get Toolbox(configDir, modelsDir) {
+    static get Toolbox() {
         return {
-            diagnose:  require('./src/toolbox/diagnose')({configDir, modelsDir}),
-            setup: require('./src/toolbox/setup')({configDir, modelsDir}),
-            upgrade: require('./src/toolbox/upgrade')(params)
+            diagnose:  require('./src/toolbox/diagnose'),
+            setup: require('./src/toolbox/setup'),
+            upgrade: require('./src/toolbox/upgrade')
         }
     }
 

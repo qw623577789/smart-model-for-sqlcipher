@@ -1,9 +1,9 @@
 const Ajv = require('ajv');
 const ajv = new Ajv();
-const Helper = require('../../lib/helper');
+const Helper = require('../../../lib/helper');
 
-module.exports = (param) => {
-    const helper = new Helper(param.modelsDir, param.configDir); 
+module.exports = (modelsDir, configDir) => {
+    const helper = new Helper(modelsDir, configDir); 
     if (!ajv.validate({
         type: "object",
         properties: {
