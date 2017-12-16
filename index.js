@@ -34,6 +34,14 @@ module.exports = class {
         };
     }
 
+    static get Toolbox() {
+        return {
+            diagnose:  require('./src/toolbox/diagnose')(params),
+            setup: require('./src/toolbox/setup')(params),
+            upgrade: require('./src/toolbox/upgrade')(params)
+        }
+    }
+
     static setup(modelsDir, configDir) {
         Command.config = require(path.resolve(configDir));
         Command.models = walk(path.resolve(modelsDir), {
