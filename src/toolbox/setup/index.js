@@ -47,7 +47,12 @@ module.exports = async (modelsDir, configDir) => {
                 sql += sql.length > 0 ? `,\`${field}\`` : `\`${field}\``;
                 switch(desc.type.toLowerCase()) {
                     case 'string':
-                        sql += ` VARCHAR(${desc.length}) NOT NULL DEFAULT '${desc.default}'`;
+                        if (desc.length != undefined) {
+                            sql += ` VARCHAR(${desc.length}) NOT NULL DEFAULT '${desc.default}'`;
+                        }
+                        else {
+                            sql += ` TEXT NOT NULL DEFAULT '${desc.default}'`;
+                        }
                         break;
                     case 'integer':
                         sql += ` INTEGER NOT NULL DEFAULT ${desc.default}`;
