@@ -1,10 +1,11 @@
 {
   "name": "smart-model-for-sqlcipher",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "a smart model middleware",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "postinstall": "node post_install.js"
   },
   "repository": {
     "type": "git",
@@ -23,11 +24,9 @@
   },
   "homepage": "https://github.com/qw623577789/smart-model-for-sqlcipher#readme",
   "dependencies": {
-    "ajv": "^5.2.3",
-    "fs-extra": "^4.0.2",
-    "klaw-sync": "^3.0.0",
+    "klaw-sync": "^3.0.2",
     "opts": "^1.2.6",
-    "sqlcipher": "^1.1.1",
-    "sqlstring": "^2.3.0"
+    "sqlite3": "*",
+    "sqlstring": "^2.3.1"
   }
 }

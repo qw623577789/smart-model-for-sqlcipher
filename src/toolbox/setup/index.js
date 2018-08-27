@@ -1,6 +1,5 @@
-const fsx = require('fs-extra');
 const Helper = require('../../../lib/helper');
-const sqlite3 = require('sqlcipher').verbose();
+const sqlite3 = require('sqlite3').verbose();
 
 async function executeSql(connection, sql) {
     return await new Promise((resolve, reject) => {

@@ -1,5 +1,5 @@
 const assert = require('assert');
-const sqlite3 = require('sqlcipher').verbose();
+const sqlite3 = require('sqlite3').verbose();
 let config = undefined;
 let models = {};
 

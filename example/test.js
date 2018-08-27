@@ -1,15 +1,15 @@
 const SmartModel = require('../');
 const Logic = SmartModel.Logic;
 
-SmartModel.setup(`${__dirname}/models`, `${__dirname}/config`);
-
 (async () => {
     try {
+        //建库
+        await SmartModel.Toolbox.setup(`${__dirname}/models`, `${__dirname}/config`);
+        //测试
+        SmartModel.setup(`${__dirname}/models`, `${__dirname}/config`);
         console.log(await SmartModel.insert('user').data({name:'ray', id: '1003'}).run());
         await SmartModel.insert('user_statistic').data({id:'1003', name:'aaa', logins:3, logouts:2}).run();
         await SmartModel.insert('order').data({id:'123232', amount:1000, userId:'1003'}).run();
-        
-
         let counts = await SmartModel.count('user').where(
             Logic.and([
                 Logic.statement('name', SmartModel.Ops.LIKE, '%ay%'),

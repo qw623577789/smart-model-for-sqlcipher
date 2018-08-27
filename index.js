@@ -1,7 +1,5 @@
 const path = require('path');
-const fs = require('fs');
 const walk = require('klaw-sync');
-const assert = require('assert');
 
 const Command = require('./src/command');
 const Select = require('./src/command/select');
@@ -36,7 +34,6 @@ module.exports = class {
 
     static get Toolbox() {
         return {
-            diagnose:  require('./src/toolbox/diagnose'),
             setup: require('./src/toolbox/setup'),
             upgrade: require('./src/toolbox/upgrade')
         }
